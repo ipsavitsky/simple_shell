@@ -3,7 +3,7 @@ project(funcs)
 
 set(CMAKE_C_STANDARD 11)
 
-set(SOURCE_LIB arithm_func.c)
+set(SOURCE_LIB funcs.c)
 
 include_directories(../rec_desc)
 

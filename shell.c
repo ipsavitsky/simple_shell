@@ -5,7 +5,7 @@
 
 #include "rec_desc.h"
 
-void sigint_ign(int s){
+void sigint_ign(int s) {
     // printf("^C\n");
     kill(0, SIGTERM);
 }
@@ -26,8 +26,7 @@ int main(void) {
         if (getline(&curline, &what, stdin) == -1) {
             printf("error reading\n");
             break;
-        }
-        else if ((strlen(curline) == 2) && (*curline == 'q')){
+        } else if ((strlen(curline) == 2) && (*curline == 'q')) {
             break;
         } else {
             free(expr.string_form);

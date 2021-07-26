@@ -1,4 +1,4 @@
-#include "arithm_func.h"
+#include "funcs.h"
 
 #include <ctype.h>
 #include <stdio.h>
