@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <unistd.h>
 #include <signal.h>
 
 #include "rec_desc.h"
@@ -10,8 +8,7 @@
 void sigint_ign(int s){
     // printf("^C\n");
     kill(0, SIGTERM);
-    return;
-};
+}
 
 int main(void) {
     char *curline = NULL;
