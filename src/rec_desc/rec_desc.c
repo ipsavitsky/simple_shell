@@ -1,15 +1,10 @@
 #include "arithm_func.h"
 
 #include <ctype.h>
-#include <math.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
-#include <sys/fcntl.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -20,15 +15,23 @@
 
 
 int put_elem_in_RPN(RPN *expression, Size_elem size, void *data, Calculate_elem func);
+
 int parse_logic(Expression *expr, RPN *stack_mach, size_t *br_inj);
+
 int parse_redir(Expression *expr, RPN *stack_mach, long *infd, long *outfd, size_t *br_injection);
+
 int parse_streamable_prog(Expression *expr, RPN *stack_mach, size_t *br_injection);
+
 int parse_prog_call(Expression *expr, RPN *stack_mach);
+
 int parse_literal(Expression *expr, RPN *stack_mach);
 
 int parse_output_filename_rw(Expression *expr, long *fd);
-int parse_output_filename_appnd(Expression *expr, long  *fd);
+
+int parse_output_filename_appnd(Expression *expr, long *fd);
+
 int parse_input_filename(Expression *expr, long *fd);
+
 int parse_pipes(Expression *expr, RPN *stack_mach, size_t *br_injection);
 
 int put_elem_in_RPN(RPN *expression, Size_elem size, void *data, Calculate_elem func) {
@@ -38,39 +41,39 @@ int put_elem_in_RPN(RPN *expression, Size_elem size, void *data, Calculate_elem 
     struct input_data {
         Size_elem size;
         Calculate_elem f;
-    }dat;
+    } dat;
     dat.size = size;
     if (dat.size % 8 != 0) dat.size += (8 - size % 8);
     dat.f = func;
     // printf("{%d; %p}\n", dat.size, dat.f);
-    memcpy((struct input_data *)&(((char *)expression->data)[expression->occupied]), &dat,
+    memcpy((struct input_data *) &(((char *) expression->data)[expression->occupied]), &dat,
            sizeof(struct input_data));
     expression->occupied += sizeof(struct input_data);
     if (data != NULL) {
-        memcpy((char *)expression->data + expression->occupied, data, size);
+        memcpy((char *) expression->data + expression->occupied, data, size);
         expression->occupied += dat.size;
     }
     return 0;
 }
 
-int inject_value(RPN *expression, Size_elem size, void *data, size_t position){
+int inject_value(RPN *expression, Size_elem size, void *data, size_t position) {
     struct input_data {
         Size_elem size;
         Calculate_elem f;
     } *dat;
-    dat = (struct input_data *)&((char *)expression->data)[position];
+    dat = (struct input_data *) &((char *) expression->data)[position];
     dat->size = size;
     position += sizeof(struct input_data);
-    memcpy((char *)expression->data + position, data, size);
+    memcpy((char *) expression->data + position, data, size);
     return 0;
 }
 
-int inject_size(RPN *expression, Size_elem size, size_t position){
+int inject_size(RPN *expression, Size_elem size, size_t position) {
     struct input_data {
         Size_elem size;
         Calculate_elem f;
     } *dat;
-    dat = (struct input_data *)&((char *)expression->data)[position];
+    dat = (struct input_data *) &((char *) expression->data)[position];
     dat->size = size;
     return 0;
 }
@@ -92,10 +95,9 @@ int parse_logic(Expression *expr, RPN *stack_mach, size_t *br_inj) {
         switch (*(expr->curpointer++)) {
             case '&':
                 expr->curpointer++;
-                if(br_injection == -1){
+                if (br_injection == -1) {
                     SAFE(put_elem_in_RPN(stack_mach, 0, NULL, execute));
-                }
-                else{
+                } else {
                     SAFE(put_elem_in_RPN(stack_mach, sizeof(br_injection), &br_injection, execute_brackets));
                     injection_value += sizeof(br_injection);
                     br_injection = -1;
@@ -106,10 +108,9 @@ int parse_logic(Expression *expr, RPN *stack_mach, size_t *br_inj) {
                 break;
             case '|':
                 expr->curpointer++;
-                if(br_injection == -1){
+                if (br_injection == -1) {
                     SAFE(put_elem_in_RPN(stack_mach, 0, NULL, execute));
-                }
-                else{
+                } else {
                     SAFE(put_elem_in_RPN(stack_mach, sizeof(br_injection), &br_injection, execute_brackets));
                     br_injection = -1;
                 }
@@ -118,10 +119,9 @@ int parse_logic(Expression *expr, RPN *stack_mach, size_t *br_inj) {
                 dummy = 1;
                 break;
             case ';':
-                if(br_injection == -1){
+                if (br_injection == -1) {
                     SAFE(put_elem_in_RPN(stack_mach, 0, NULL, execute));
-                }
-                else{
+                } else {
                     SAFE(put_elem_in_RPN(stack_mach, sizeof(br_injection), &br_injection, execute_brackets));
                     br_injection = -1;
                 }
@@ -130,10 +130,10 @@ int parse_logic(Expression *expr, RPN *stack_mach, size_t *br_inj) {
                 break;
         }
         SAFE(parse_pipes(expr, stack_mach, &br_injection));
-        if(br_injection != -1){
+        if (br_injection != -1) {
             injection_value += sizeof(br_injection);
         }
-        if(dummy == 1){
+        if (dummy == 1) {
             injection_value += stack_mach->occupied + sizeof(struct input_data);
             inject_value(stack_mach, sizeof(injection_value), &injection_value, injection_point);
         }
@@ -143,33 +143,31 @@ int parse_logic(Expression *expr, RPN *stack_mach, size_t *br_inj) {
 }
 
 
-
-int parse_pipes(Expression *expr, RPN *stack_mach, size_t *br_injection){
+int parse_pipes(Expression *expr, RPN *stack_mach, size_t *br_injection) {
     int flag;
     long infd = 0, outfd = 1, safe = 1;
     // size_t injection_val = -1;
     SAFE(parse_redir(expr, stack_mach, &infd, &outfd, br_injection));
     while (isspace(*(expr->curpointer))) ++(expr->curpointer);
-    while ((*(expr -> curpointer) == '|') && (*(expr -> curpointer + 1) != '|')){
-            expr->curpointer++;
-            int pipe_fd[2];
-            if(pipe(pipe_fd) == -1){
-                return E_PIPE;
-            }
-            safe = outfd = pipe_fd[1];
-            SAFE(put_elem_in_RPN(stack_mach, sizeof(outfd), &outfd, chg_out_stream));
-            SAFE(put_elem_in_RPN(stack_mach, sizeof(infd), &infd, chg_in_stream));
-            if(*br_injection == -1){
-                SAFE(put_elem_in_RPN(stack_mach, 0, NULL, execute_nonblock));
-            }
-            else{
-                SAFE(put_elem_in_RPN(stack_mach, sizeof(*br_injection), br_injection, execute_brackets_nonblock));
-                *br_injection = -1;
-            }
-            infd = pipe_fd[0];
-            SAFE(parse_redir(expr, stack_mach, &infd, &outfd, br_injection));
+    while ((*(expr->curpointer) == '|') && (*(expr->curpointer + 1) != '|')) {
+        expr->curpointer++;
+        int pipe_fd[2];
+        if (pipe(pipe_fd) == -1) {
+            return E_PIPE;
+        }
+        safe = outfd = pipe_fd[1];
+        SAFE(put_elem_in_RPN(stack_mach, sizeof(outfd), &outfd, chg_out_stream));
+        SAFE(put_elem_in_RPN(stack_mach, sizeof(infd), &infd, chg_in_stream));
+        if (*br_injection == -1) {
+            SAFE(put_elem_in_RPN(stack_mach, 0, NULL, execute_nonblock));
+        } else {
+            SAFE(put_elem_in_RPN(stack_mach, sizeof(*br_injection), br_injection, execute_brackets_nonblock));
+            *br_injection = -1;
+        }
+        infd = pipe_fd[0];
+        SAFE(parse_redir(expr, stack_mach, &infd, &outfd, br_injection));
     }
-    if(safe == outfd){
+    if (safe == outfd) {
         outfd = 1;
     }
     SAFE(put_elem_in_RPN(stack_mach, sizeof(outfd), &outfd, chg_out_stream));
@@ -189,8 +187,7 @@ int parse_redir(Expression *expr, RPN *stack_mach, long *infd, long *outfd, size
                 expr->curpointer++;
                 SAFE(parse_output_filename_appnd(expr, outfd));
                 // outflag = 1;
-            }
-            else{
+            } else {
                 SAFE(parse_output_filename_rw(expr, outfd));
                 // outflag = 2;
             }
@@ -207,13 +204,14 @@ int parse_input_filename(Expression *expr, long *fd) {
     unsigned char var[129];
     expr->curpointer++;
     while (isspace(*(expr->curpointer))) ++(expr->curpointer);
-    while (((*(expr->curpointer) != '|') && (*(expr->curpointer) != ';') && (*(expr->curpointer) != '>') && (*(expr->curpointer) != '<') &&
+    while (((*(expr->curpointer) != '|') && (*(expr->curpointer) != ';') && (*(expr->curpointer) != '>') &&
+            (*(expr->curpointer) != '<') &&
             (*(expr->curpointer) != '\0')) &&
            (size < 128))
         var[size++] = *(expr->curpointer++);
     var[size - 1] = '\0';
     long loc_fd;
-    if((loc_fd = open(var, O_RDONLY)) == -1){
+    if ((loc_fd = open(var, O_RDONLY)) == -1) {
         return E_FILE_OP;
     }
     *fd = loc_fd;
@@ -225,13 +223,14 @@ int parse_output_filename_rw(Expression *expr, long *fd) {
     unsigned char var[129];
     expr->curpointer++;
     while (isspace(*(expr->curpointer))) ++(expr->curpointer);
-    while (((*(expr->curpointer) != '|') && (*(expr->curpointer) != ';') && (*(expr->curpointer) != '>') && (*(expr->curpointer) != '<') &&
+    while (((*(expr->curpointer) != '|') && (*(expr->curpointer) != ';') && (*(expr->curpointer) != '>') &&
+            (*(expr->curpointer) != '<') &&
             (*(expr->curpointer) != '\0')) &&
            (size < 128))
         var[size++] = *(expr->curpointer++);
     var[size - 1] = '\0';
     long loc_fd;
-    if((loc_fd = creat(var, 0644)) == -1){
+    if ((loc_fd = creat(var, 0644)) == -1) {
         return E_FILE_OP;
     }
     *fd = loc_fd;
@@ -243,13 +242,14 @@ int parse_output_filename_appnd(Expression *expr, long *fd) {
     unsigned char var[129];
     expr->curpointer++;
     while (isspace(*(expr->curpointer))) ++(expr->curpointer);
-    while (((*(expr->curpointer) != '|') && (*(expr->curpointer) != ';') && (*(expr->curpointer) != '>') && (*(expr->curpointer) != '<') &&
+    while (((*(expr->curpointer) != '|') && (*(expr->curpointer) != ';') && (*(expr->curpointer) != '>') &&
+            (*(expr->curpointer) != '<') &&
             (*(expr->curpointer) != '\0')) &&
            (size < 128))
         var[size++] = *(expr->curpointer++);
     var[size - 1] = '\0';
     long loc_fd;
-    if((loc_fd = open(var, O_CREAT | O_APPEND | O_WRONLY, 0644)) == -1){
+    if ((loc_fd = open(var, O_CREAT | O_APPEND | O_WRONLY, 0644)) == -1) {
         return E_FILE_OP;
     }
     *fd = loc_fd;
@@ -291,8 +291,10 @@ int parse_prog_call(Expression *expr, RPN *stack_mach) {
     int flag;
     int size = 0;
     unsigned char var[129];
-    while (((*(expr->curpointer) != '|') && (*(expr->curpointer) != ';') && (*(expr->curpointer) != '>') && (*(expr->curpointer) != '<') &&
-            (*(expr->curpointer) != '\0') && (*(expr->curpointer) != '&') && (*(expr->curpointer) != '\n') && (*(expr->curpointer) != ')')) &&
+    while (((*(expr->curpointer) != '|') && (*(expr->curpointer) != ';') && (*(expr->curpointer) != '>') &&
+            (*(expr->curpointer) != '<') &&
+            (*(expr->curpointer) != '\0') && (*(expr->curpointer) != '&') && (*(expr->curpointer) != '\n') &&
+            (*(expr->curpointer) != ')')) &&
            (size < 128))
         var[size++] = *(expr->curpointer++);
     var[size++] = '\0';
@@ -315,8 +317,9 @@ int compute_expression(Expression *expr, int *res) {
         RPN_finalize(&stack_machine);
         return flag;
     }
-    if(br_p == -1) SAFE(put_elem_in_RPN(&stack_machine, 0, NULL, execute));
-    else SAFE(put_elem_in_RPN(&stack_machine, sizeof(br_p), &br_p, execute_brackets));
+    if (br_p == -1) SAFE(put_elem_in_RPN(&stack_machine, 0, NULL, execute));
+    else
+        SAFE(put_elem_in_RPN(&stack_machine, sizeof(br_p), &br_p, execute_brackets));
     // this realloc will never do anything because we demand a smaller chunk of memory so it will
     // always return the same pointer therefore there will never be an error
     stack_machine.data = realloc(stack_machine.data, stack_machine.occupied);

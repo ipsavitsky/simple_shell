@@ -1,9 +1,9 @@
 #include "errors.h"
 #include <stdio.h>
 
-void err_print(int err){
+void err_print(int err) {
     fprintf(stderr, "\033[31;1;4mError:\033[0m");
-    switch (err){
+    switch (err) {
         case E_MEM_ALLOC:
             fprintf(stderr, " memory allocation\n");
             break;
