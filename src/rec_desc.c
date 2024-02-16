@@ -1,4 +1,4 @@
-#include "funcs.h"
+#include "simple_shell/funcs.h"
 
 #include <ctype.h>
 #include <stdio.h>
