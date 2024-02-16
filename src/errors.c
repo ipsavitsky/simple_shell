@@ -1,4 +1,4 @@
-#include "errors.h"
+#include "simple_shell/errors.h"
 #include <stdio.h>
 
 void err_print(int err) {

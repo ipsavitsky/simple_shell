@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
-#include "rec_desc.h"
+#include "simple_shell/rec_desc.h"
 
 void sigint_ign(int s) {
     // printf("^C\n");
