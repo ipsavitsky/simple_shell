@@ -1,0 +1,21 @@
+name: Build the executable
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    runs-on: kitware/cmake:latest
+    steps:
+      - name: Checkout
+        uses: action/checkout@v3
+
+      - name: Generate build files
+        run: |
+          cmake -B build .
+
+      - name: Build project
+        run: |
+          cmake --build build
